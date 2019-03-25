@@ -107,5 +107,45 @@ po.test(cbind(b, f))
 
 # We use it for short run and long run dynamics of Yt ~ Xt
 
+# Data: b = bonds, f = funds
+
+## Error correction notation:
+# delta(b_t) = - alpha (b_t-1 - B1 - B2(f_t-1)) + D0 delta(f_t) + D1 delta(f_t-1) + v_t
+
+# regress bonds over funds (OLS), and use the intercept and beta coefficient of the model for the long run estimates
+b.ols = dynlm(L(b) ~ L(f))
+
+b1ini = coef(b.ols)[[1]]
+b2ini = coef(b.ols)[[2]]
+
+# regress bonds over lag bonds, funds, and lag funds (OLS)
+d.ols = dynlm(b ~ L(b) + f + L(f))
+
+aini = 1-coef(d.ols)[[2]]
+d0ini = coef(d.ols)[[3]]
+d1ini = coef(d.ols)[[4]]
+
+# construct the variables for the error correction model
+Db = diff(b)
+Df = diff(f)
+Lb = stats::lag(b, -1)
+Lf = stats::lag(f, -1)
+
+LDf = stats::lag(diff(f), -1)
+
+# construct the data frame
+bfset = data.frame(ts.union(cbind(b, f, Lb, Lf, Db, Df, LDf)))
+
+# run the model
+bf.nls = nls(Db ~ -a*(Lb - b1 - b2*Lf) + d0*Df + d1*LDf,
+             na.action = na.omit,
+             data = bfset,
+             start = list(a = aini, b1 = b1ini, b2 = b2ini, d0 = d0ini, d1 = d1ini))
+
+summary(bf.nls)
+
+
+
+
 
 
